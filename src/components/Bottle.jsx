@@ -83,7 +83,9 @@ export default function Bottle({ data, onSelect }) {
   const groupRef = useRef(null)
   const [hovered, setHovered] = useState(false)
 
-  const { x, z, isNew } = data
+  const x = data.x ?? data.pos_x ?? 0
+  const z = data.z ?? data.pos_z ?? 0
+  const { isNew } = data
 
   useFrame((state) => {
     if (!groupRef.current) return

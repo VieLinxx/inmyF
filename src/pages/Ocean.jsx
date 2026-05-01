@@ -46,6 +46,8 @@ export default function Ocean() {
 
     const processed = (data || []).map((b) => ({
       ...b,
+      x: b.pos_x,
+      z: b.pos_z,
       likes: b.likes?.length || 0,
       likedByMe: b.likes?.some((l) => l.user_id === userId) || false,
       replies: b.bottle_replies || [],
@@ -130,6 +132,8 @@ export default function Ocean() {
 
       const newBottle = {
         ...data[0],
+        x: data[0].pos_x,
+        z: data[0].pos_z,
         likes: 0,
         likedByMe: false,
         replies: [],
@@ -142,7 +146,7 @@ export default function Ocean() {
   )
 
   const handleLand = useCallback((bottle) => {
-    setSplash({ x: bottle.x, z: bottle.z, id: Date.now() })
+    setSplash({ x: bottle.x ?? bottle.pos_x ?? 0, z: bottle.z ?? bottle.pos_z ?? 0, id: Date.now() })
     setFallingBottle(null)
     setBottles((prev) => [bottle, ...prev])
   }, [])

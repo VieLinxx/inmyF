@@ -16,7 +16,8 @@ export default function FallingBottle({ data, onLand }) {
   const startTime = useRef(Date.now())
   const landed = useRef(false)
 
-  const { x, z } = data
+  const x = data.x ?? data.pos_x ?? 0
+  const z = data.z ?? data.pos_z ?? 0
 
   useFrame((state) => {
     if (landed.current || !groupRef.current) return
