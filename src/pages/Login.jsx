@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/userStore'
@@ -16,8 +16,8 @@ export default function Login() {
   const signUp = useUserStore((s) => s.signUp)
   const isLoggedIn = useUserStore((s) => s.isLoggedIn)
 
-  // 页面阶段：video → slogan → form
-  const [phase, setPhase] = useState('video')
+  // 页面阶段：brand → slogan → form
+  const [phase, setPhase] = useState('brand')
 
   // 表单模式：login / register
   const [mode, setMode] = useState('login')
@@ -33,27 +33,17 @@ export default function Login() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  // brand 阶段：停留 1.2s 后切换到 slogan
+  useEffect(() => {
+    if (phase !== 'brand') return
+    const timer = setTimeout(() => setPhase('slogan'), 1200)
+    return () => clearTimeout(timer)
+  }, [phase])
+
   // slogan 阶段：停留 1.5s 后切换到 form
   useEffect(() => {
     if (phase !== 'slogan') return
     const timer = setTimeout(() => setPhase('form'), 1500)
-    return () => clearTimeout(timer)
-  }, [phase])
-
-  // 视频播放结束 → slogan
-  const handleVideoEnded = useCallback(() => {
-    setPhase('slogan')
-  }, [])
-
-  // 视频加载失败回退
-  const handleVideoError = useCallback(() => {
-    setPhase('slogan')
-  }, [])
-
-  // 视频阶段超时回退（部分移动端浏览器不触发 onEnded/onError）
-  useEffect(() => {
-    if (phase !== 'video') return
-    const timer = setTimeout(() => setPhase('slogan'), 3500)
     return () => clearTimeout(timer)
   }, [phase])
 
@@ -128,62 +118,32 @@ export default function Login() {
       className="relative flex flex-col items-center justify-center w-full overflow-hidden dream-gradient"
       style={{ height: '100dvh' }}
     >
-      {/* ---------- 全屏视频 ---------- */}
+      {/* ---------- Brand: inmyF ---------- */}
       <AnimatePresence>
-        {phase === 'video' && (
+        {phase === 'brand' && (
           <motion.div
-            key="fullscreen-video"
-            className="absolute inset-0 z-10"
+            key="brand"
+            className="absolute inset-0 flex items-center justify-center z-20"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.8, ease: 'easeInOut' }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <video
-              src="/videos/entrance.mp4"
-              autoPlay
-              muted
-              playsInline
-              webkitPlaysInline="true"
-              x5VideoPlayerType="h5"
-              x5VideoPlayerFullscreen={false}
-              x5PlaysInline
-              preload="auto"
-              onEnded={handleVideoEnded}
-              onError={handleVideoError}
-              className="w-full h-full"
-              style={{ objectFit: 'cover' }}
-            />
-            <motion.div
-              className="absolute top-[15%] right-[12%] px-4 py-2 bg-white/90 rounded-2xl"
+            <motion.p
+              className="text-center font-light"
               style={{
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255,255,255,0.5)',
-                color: '#262626',
-                fontSize: '15px',
-                fontWeight: 500,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                color: '#5a7a8a',
+                fontSize: '42px',
+                fontWeight: 300,
+                letterSpacing: '2px',
+                textShadow: '0 2px 20px rgba(255,255,255,0.8)',
               }}
-              initial={{ scale: 0, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{
-                type: 'spring',
-                stiffness: 400,
-                damping: 15,
-                delay: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
             >
-              喵~
-              <div
-                className="absolute -bottom-1 left-4 w-3 h-3 bg-white/90"
-                style={{
-                  transform: 'translateY(50%) rotate(45deg)',
-                  borderRight: '1px solid rgba(255,255,255,0.5)',
-                  borderBottom: '1px solid rgba(255,255,255,0.5)',
-                }}
-              />
-            </motion.div>
+              inmyF
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -199,7 +159,7 @@ export default function Login() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <p
+            <motion.p
               className="text-center whitespace-nowrap"
               style={{
                 color: '#5a7a8a',
@@ -208,9 +168,12 @@ export default function Login() {
                 letterSpacing: '0.5px',
                 textShadow: '0 2px 20px rgba(255,255,255,0.8)',
               }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
             >
               我的感受也很重要
-            </p>
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
