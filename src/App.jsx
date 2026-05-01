@@ -1,11 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Login from './pages/Login'
 import Layout from './components/Layout'
 import MyCat from './pages/MyCat'
 import Ocean from './pages/Ocean'
 import FriendTime from './pages/FriendTime'
 import Friends from './pages/Friends'
+import SplashScreen from './components/SplashScreen'
 import { useUserStore } from './store/userStore'
 
 /* ============================================
@@ -17,16 +18,13 @@ function AuthGuard() {
   const isAuthReady = useUserStore((state) => state.isAuthReady)
 
   if (!isAuthReady) {
-    // 等待 Supabase 会话恢复完成
     return (
       <div
         className="flex items-center justify-center w-full dream-gradient"
         style={{ height: '100dvh' }}
       >
         <div className="text-center">
-          <div
-            className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-white/30 border-t-white animate-spin"
-          />
+          <div className="w-8 h-8 mx-auto mb-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
           <p style={{ color: 'rgba(90,122,138,0.6)', fontSize: '14px' }}>
             加载中...
           </p>
@@ -62,6 +60,9 @@ function GuestGuard() {
 }
 
 function App() {
+  const [splashDone, setSplashDone] = useState(false)
+  const isAuthReady = useUserStore((state) => state.isAuthReady)
+
   useEffect(() => {
     // 在 effect 内直接读取 store，避免依赖数组不稳定问题
     const { initAuth, subscribeAuth } = useUserStore.getState()
@@ -95,6 +96,22 @@ function App() {
     }, 5000)
     return () => clearTimeout(timer)
   }, [])
+
+  // 启动画面至少显示 2.7 秒
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashDone(true), 2700)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // 启动画面期间始终显示 SplashScreen
+  if (!splashDone) {
+    return <SplashScreen showLoading={false} />
+  }
+
+  // splash 结束后，如果 auth 还没准备好，显示 SplashScreen + loading
+  if (!isAuthReady) {
+    return <SplashScreen showLoading={true} />
+  }
 
   return (
     <BrowserRouter>
