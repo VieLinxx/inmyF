@@ -26,6 +26,7 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
   const [likeCount, setLikeCount] = useState(bottle?.likes || 0)
   const [replyText, setReplyText] = useState('')
   const [localReplies, setLocalReplies] = useState(bottle?.replies || [])
+  const [isReplying, setIsReplying] = useState(false)
 
   if (!bottle) return null
 
@@ -36,17 +37,24 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
     onLike?.(bottle.id)
   }
 
-  const handleReply = () => {
+  const handleReply = async () => {
     const text = replyText.trim()
-    if (!text) return
-    const newReply = {
-      id: `reply_${Date.now()}`,
-      content: text,
-      created_at: new Date().toISOString(),
+    if (!text || isReplying) return
+    setIsReplying(true)
+    try {
+      await onReply?.(bottle.id, text)
+      const newReply = {
+        id: `reply_${Date.now()}`,
+        content: text,
+        created_at: new Date().toISOString(),
+      }
+      setLocalReplies((prev) => [...prev, newReply])
+      setReplyText('')
+    } catch (err) {
+      alert(err.message || '回复失败，请检查网络或重新登录')
+    } finally {
+      setIsReplying(false)
     }
-    setLocalReplies((prev) => [...prev, newReply])
-    onReply?.(bottle.id, text)
-    setReplyText('')
   }
 
   return createPortal(
@@ -225,14 +233,14 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
               />
               <motion.button
                 onClick={handleReply}
-                disabled={!replyText.trim()}
-                whileTap={{ scale: 0.9 }}
+                disabled={!replyText.trim() || isReplying}
+                whileTap={replyText.trim() && !isReplying ? { scale: 0.9 } : {}}
                 className="flex items-center justify-center"
                 style={{
                   width: 40,
                   height: 40,
                   borderRadius: 12,
-                  background: replyText.trim()
+                  background: replyText.trim() && !isReplying
                     ? 'linear-gradient(135deg, #5b8def 0%, #8b5cf6 100%)'
                     : 'rgba(255,255,255,0.06)',
                   color: '#ffffff',

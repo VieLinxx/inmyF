@@ -17,17 +17,24 @@ const GUESS_EMOJIS = [
 export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
   const [selected, setSelected] = useState(null)
   const [result, setResult] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = () => {
-    if (!selected || !moment) return
-    const isCorrect = selected === moment.correctEmoji
-    setResult({ isCorrect, correctEmoji: moment.correctEmoji })
-    onSubmit?.({ momentId: moment.id, emoji: selected })
-    setTimeout(() => {
-      setResult(null)
-      setSelected(null)
-      onClose()
-    }, 2000)
+  const handleSubmit = async () => {
+    if (!selected || !moment || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit?.({ momentId: moment.id, emoji: selected })
+      const isCorrect = selected === moment.correctEmoji
+      setResult({ isCorrect, correctEmoji: moment.correctEmoji })
+      setTimeout(() => {
+        setResult(null)
+        setSelected(null)
+        onClose()
+      }, 2000)
+    } catch (err) {
+      alert(err.message || '提交失败，请检查网络或重新登录')
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -123,20 +130,20 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
                 style={{
                   height: 50,
                   borderRadius: 16,
-                  background: selected
+                  background: selected && !isSubmitting
                     ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                     : 'linear-gradient(135deg, #d1d5db 0%, #e5e7eb 100%)',
-                  boxShadow: selected
+                  boxShadow: selected && !isSubmitting
                     ? '0 4px 20px rgba(102, 126, 234, 0.3)'
                     : 'none',
                   fontSize: '16px',
                   transition: 'all 0.3s ease',
                 }}
                 onClick={handleSubmit}
-                disabled={!selected}
-                whileTap={selected ? { scale: 0.97 } : {}}
+                disabled={!selected || isSubmitting}
+                whileTap={selected && !isSubmitting ? { scale: 0.97 } : {}}
               >
-                确认猜测
+                {isSubmitting ? '提交中...' : '确认猜测'}
               </motion.button>
             </div>
 

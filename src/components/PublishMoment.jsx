@@ -22,6 +22,7 @@ export default function PublishMoment({ isOpen, onClose, onSubmit }) {
   const [content, setContent] = useState('')
   const [image, setImage] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const fileRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -37,20 +38,27 @@ export default function PublishMoment({ isOpen, onClose, onSubmit }) {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  const handleSubmit = () => {
-    if (!emoji || !content.trim()) return
-    onSubmit?.({ emoji, content: content.trim(), image })
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setEmoji(null)
-      setContent('')
-      setImage(null)
-      onClose()
-    }, 1500)
+  const handleSubmit = async () => {
+    if (!emoji || !content.trim() || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit?.({ emoji, content: content.trim(), image })
+      setSubmitted(true)
+      setTimeout(() => {
+        setSubmitted(false)
+        setEmoji(null)
+        setContent('')
+        setImage(null)
+        onClose()
+      }, 1200)
+    } catch (err) {
+      alert(err.message || '发布失败，请检查网络或重新登录')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const canSubmit = emoji && content.trim()
+  const canSubmit = emoji && content.trim() && !isSubmitting
 
   return (
     <AnimatePresence>
@@ -243,11 +251,11 @@ export default function PublishMoment({ isOpen, onClose, onSubmit }) {
                   transition: 'all 0.3s ease',
                 }}
                 onClick={handleSubmit}
-                disabled={!canSubmit}
-                whileTap={canSubmit ? { scale: 0.97 } : {}}
+                disabled={!canSubmit || isSubmitting}
+                whileTap={canSubmit && !isSubmitting ? { scale: 0.97 } : {}}
               >
                 <Send size={16} />
-                发布动态
+                {isSubmitting ? '发布中...' : '发布动态'}
               </motion.button>
             </div>
 
