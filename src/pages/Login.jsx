@@ -45,6 +45,18 @@ export default function Login() {
     setPhase('slogan')
   }, [])
 
+  // 视频加载失败回退
+  const handleVideoError = useCallback(() => {
+    setPhase('slogan')
+  }, [])
+
+  // 视频阶段超时回退（部分移动端浏览器不触发 onEnded/onError）
+  useEffect(() => {
+    if (phase !== 'video') return
+    const timer = setTimeout(() => setPhase('slogan'), 3500)
+    return () => clearTimeout(timer)
+  }, [phase])
+
   // 已登录则跳转
   useEffect(() => {
     if (isLoggedIn) navigate('/app/mycat', { replace: true })
@@ -133,8 +145,12 @@ export default function Login() {
               muted
               playsInline
               webkitPlaysInline="true"
+              x5VideoPlayerType="h5"
+              x5VideoPlayerFullscreen={false}
+              x5PlaysInline
               preload="auto"
               onEnded={handleVideoEnded}
+              onError={handleVideoError}
               className="w-full h-full"
               style={{ objectFit: 'cover' }}
             />
