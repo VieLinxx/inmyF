@@ -59,8 +59,27 @@ export default function FriendTime() {
   const user = useUserStore((s) => s.user)
   const currentUserId = user?.id
 
-  // ===== 加载动态列表 =====
+  // ===== 加载动态列表（仅自己和好友） =====
   const loadMoments = useCallback(async () => {
+    if (!currentUserId) {
+      setMoments([])
+      setIsLoading(false)
+      return
+    }
+
+    // 1. 获取好友列表（双向）
+    const [{ data: asUser }, { data: asFriend }] = await Promise.all([
+      supabase.from('friendships').select('friend_id').eq('user_id', currentUserId),
+      supabase.from('friendships').select('user_id').eq('friend_id', currentUserId),
+    ])
+
+    const friendIds = [
+      ...(asUser || []).map((f) => f.friend_id),
+      ...(asFriend || []).map((f) => f.user_id),
+    ]
+    const allowedIds = [...new Set([currentUserId, ...friendIds])]
+
+    // 2. 查询自己和好友的动态
     const { data, error } = await supabase
       .from('moments')
       .select(
@@ -71,16 +90,18 @@ export default function FriendTime() {
         emotion_guesses(guesser_id, guessed_emotion, is_correct, guesser:profiles!guesser_id(nickname))
       `
       )
+      .in('user_id', allowedIds)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('load moments error:', error)
+      setIsLoading(false)
       return
     }
 
     setMoments((data || []).map(formatMoment))
     setIsLoading(false)
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     loadMoments()
