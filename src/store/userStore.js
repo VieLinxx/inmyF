@@ -49,33 +49,35 @@ export const useUserStore = create(
       },
 
       // ===== 监听认证状态变化 =====
+      // 注意：onAuthStateChange 回调必须是同步的，不能用 async/await
       subscribeAuth: () => {
         const { data: listener } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            try {
-              if (event === 'SIGNED_IN' && session?.user) {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .maybeSingle()
-
-                set({
-                  user: {
-                    id: session.user.id,
-                    email: session.user.email,
-                    nickname: profile?.nickname || session.user.email?.split('@')[0],
-                    avatarEmoji: profile?.avatar_emoji || '😎',
-                    avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
-                  },
-                  isLoggedIn: true,
+          (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+              // 使用 .then() 链式调用，避免 async 回调
+              supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle()
+                .then(({ data: profile }) => {
+                  set({
+                    user: {
+                      id: session.user.id,
+                      email: session.user.email,
+                      nickname: profile?.nickname || session.user.email?.split('@')[0],
+                      avatarEmoji: profile?.avatar_emoji || '😎',
+                      avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                    },
+                    isLoggedIn: true,
+                  })
                 })
-              }
-              if (event === 'SIGNED_OUT') {
-                set({ user: null, isLoggedIn: false })
-              }
-            } catch (err) {
-              console.error('auth state change error:', err)
+                .catch((err) => {
+                  console.error('auth state change error:', err)
+                })
+            }
+            if (event === 'SIGNED_OUT') {
+              set({ user: null, isLoggedIn: false })
             }
           }
         )
@@ -111,6 +113,27 @@ export const useUserStore = create(
           password,
         })
         if (error) throw error
+
+        // 登录成功后直接设置状态，不依赖 onAuthStateChange
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle()
+
+          set({
+            user: {
+              id: data.user.id,
+              email: data.user.email,
+              nickname: profile?.nickname || data.user.email?.split('@')[0],
+              avatarEmoji: profile?.avatar_emoji || '😎',
+              avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+            },
+            isLoggedIn: true,
+          })
+        }
+
         return data
       },
 
