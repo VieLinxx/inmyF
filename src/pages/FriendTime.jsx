@@ -57,7 +57,7 @@ export default function FriendTime() {
   const [isLoading, setIsLoading] = useState(true)
 
   const user = useUserStore((s) => s.user)
-  const currentUserId = user?.id || 'me'
+  const currentUserId = user?.id
 
   // ===== 加载动态列表 =====
   const loadMoments = useCallback(async () => {
@@ -146,7 +146,7 @@ export default function FriendTime() {
 
       if (error) {
         console.error('guess error:', error)
-        return
+        throw error
       }
 
       setMoments((prev) =>
@@ -169,6 +169,13 @@ export default function FriendTime() {
   // ===== 发布动态 =====
   const handlePublish = useCallback(
     async ({ emoji, content, image }) => {
+      if (!currentUserId) throw new Error('请先登录')
+
+      // 诊断日志
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[FriendTime] session:', session ? 'exists' : 'null')
+      console.log('[FriendTime] currentUserId:', currentUserId)
+
       const { data, error } = await supabase
         .from('moments')
         .insert({
@@ -183,14 +190,16 @@ export default function FriendTime() {
           author:profiles!user_id(nickname, avatar_emoji, avatar_color)
         `
         )
-        .single()
+
+      console.log('[FriendTime] insert result:', { data, error })
 
       if (error) {
         console.error('publish error:', error)
-        return
+        throw error
       }
+      if (!data || data.length === 0) throw new Error('插入后未返回数据')
 
-      const newMoment = formatMoment({ ...data, moment_likes: [], emotion_guesses: [] })
+      const newMoment = formatMoment({ ...data[0], moment_likes: [], emotion_guesses: [] })
       setMoments((prev) => [newMoment, ...prev])
     },
     [currentUserId]

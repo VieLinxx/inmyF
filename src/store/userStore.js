@@ -7,135 +7,162 @@ import { supabase } from '../lib/supabase'
  */
 export const useUserStore = create(
   persist(
-    (set, get) => ({
-      // 用户信息
-      user: null,
-      isLoggedIn: false,
-      isAuthReady: false, // 标记 Supabase 会话恢复是否完成
+    (set, get) => {
+      // 辅助：查询 profile，缺失时自动创建（防止外键约束失败）
+      const ensureProfile = async (userId, email, nickname) => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle()
 
-      // 情绪记录列表（仍本地缓存，后续可迁移到 Supabase）
-      emotionRecords: [],
+        if (!profile) {
+          const defaultProfile = {
+            id: userId,
+            nickname: nickname || email?.split('@')[0] || '用户',
+            avatar_emoji: '😎',
+            avatar_color: 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+          }
+          const { error: insertErr } = await supabase
+            .from('profiles')
+            .insert(defaultProfile)
+          if (insertErr) {
+            console.error('ensureProfile insert error:', insertErr)
+          }
+          return defaultProfile
+        }
+        return profile
+      }
 
-      // ===== 初始化：恢复 Supabase 会话 =====
-      initAuth: async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            const { data: profile } = await supabase
+      return {
+        // 用户信息
+        user: null,
+        isLoggedIn: false,
+        isAuthReady: false, // 标记 Supabase 会话恢复是否完成
+
+        // 情绪记录列表（仍本地缓存，后续可迁移到 Supabase）
+        emotionRecords: [],
+
+        // ===== 初始化：恢复 Supabase 会话 =====
+        initAuth: async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+              const profile = await ensureProfile(
+                session.user.id,
+                session.user.email,
+                session.user.user_metadata?.nickname
+              )
+
+              set({
+                user: {
+                  id: session.user.id,
+                  email: session.user.email,
+                  nickname: profile.nickname || session.user.email?.split('@')[0],
+                  avatarEmoji: profile.avatar_emoji || '😎',
+                  avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                },
+                isLoggedIn: true,
+                isAuthReady: true,
+              })
+            } else {
+              set({ isAuthReady: true })
+            }
+          } catch (err) {
+            console.error('initAuth error:', err)
+            // 无论发生什么，必须解除加载状态
+            set({ isAuthReady: true })
+          }
+        },
+
+        // ===== 监听认证状态变化 =====
+        // 注意：onAuthStateChange 回调必须是同步的，不能用 async/await
+        subscribeAuth: () => {
+          const { data: listener } = supabase.auth.onAuthStateChange(
+            (event, session) => {
+              if (event === 'SIGNED_IN' && session?.user) {
+                // 使用 .then() 链式调用，避免 async 回调
+                ensureProfile(
+                  session.user.id,
+                  session.user.email,
+                  session.user.user_metadata?.nickname
+                )
+                  .then((profile) => {
+                    set({
+                      user: {
+                        id: session.user.id,
+                        email: session.user.email,
+                        nickname: profile.nickname || session.user.email?.split('@')[0],
+                        avatarEmoji: profile.avatar_emoji || '😎',
+                        avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                      },
+                      isLoggedIn: true,
+                    })
+                  })
+                  .catch((err) => {
+                    console.error('auth state change error:', err)
+                  })
+              }
+              if (event === 'SIGNED_OUT') {
+                set({ user: null, isLoggedIn: false })
+              }
+            }
+          )
+          return listener
+        },
+
+        // ===== 邮箱注册 =====
+        signUp: async (email, password, nickname) => {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { nickname },
+            },
+          })
+          if (error) throw error
+
+          // profile 由数据库 trigger 自动创建，这里手动更新昵称
+          if (data.user) {
+            await supabase
               .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle()
+              .update({ nickname })
+              .eq('id', data.user.id)
+          }
+
+          return data
+        },
+
+        // ===== 邮箱登录 =====
+        signIn: async (email, password) => {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+          if (error) throw error
+
+          // 登录成功后直接设置状态，不依赖 onAuthStateChange
+          if (data.user) {
+            const profile = await ensureProfile(
+              data.user.id,
+              data.user.email,
+              data.user.user_metadata?.nickname
+            )
 
             set({
               user: {
-                id: session.user.id,
-                email: session.user.email,
-                nickname: profile?.nickname || session.user.email?.split('@')[0],
-                avatarEmoji: profile?.avatar_emoji || '😎',
-                avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                id: data.user.id,
+                email: data.user.email,
+                nickname: profile.nickname || data.user.email?.split('@')[0],
+                avatarEmoji: profile.avatar_emoji || '😎',
+                avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
               },
               isLoggedIn: true,
-              isAuthReady: true,
             })
-          } else {
-            set({ isAuthReady: true })
           }
-        } catch (err) {
-          console.error('initAuth error:', err)
-          // 无论发生什么，必须解除加载状态
-          set({ isAuthReady: true })
-        }
-      },
 
-      // ===== 监听认证状态变化 =====
-      // 注意：onAuthStateChange 回调必须是同步的，不能用 async/await
-      subscribeAuth: () => {
-        const { data: listener } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-              // 使用 .then() 链式调用，避免 async 回调
-              supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .maybeSingle()
-                .then(({ data: profile }) => {
-                  set({
-                    user: {
-                      id: session.user.id,
-                      email: session.user.email,
-                      nickname: profile?.nickname || session.user.email?.split('@')[0],
-                      avatarEmoji: profile?.avatar_emoji || '😎',
-                      avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
-                    },
-                    isLoggedIn: true,
-                  })
-                })
-                .catch((err) => {
-                  console.error('auth state change error:', err)
-                })
-            }
-            if (event === 'SIGNED_OUT') {
-              set({ user: null, isLoggedIn: false })
-            }
-          }
-        )
-        return listener
-      },
-
-      // ===== 邮箱注册 =====
-      signUp: async (email, password, nickname) => {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { nickname },
-          },
-        })
-        if (error) throw error
-
-        // profile 由数据库 trigger 自动创建，这里手动更新昵称
-        if (data.user) {
-          await supabase
-            .from('profiles')
-            .update({ nickname })
-            .eq('id', data.user.id)
-        }
-
-        return data
-      },
-
-      // ===== 邮箱登录 =====
-      signIn: async (email, password) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (error) throw error
-
-        // 登录成功后直接设置状态，不依赖 onAuthStateChange
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .maybeSingle()
-
-          set({
-            user: {
-              id: data.user.id,
-              email: data.user.email,
-              nickname: profile?.nickname || data.user.email?.split('@')[0],
-              avatarEmoji: profile?.avatar_emoji || '😎',
-              avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
-            },
-            isLoggedIn: true,
-          })
-        }
-
-        return data
-      },
+          return data
+        },
 
       // ===== 登出 =====
       logout: async () => {
@@ -197,12 +224,13 @@ export const useUserStore = create(
           }))
         }
       },
-    }),
-    {
-      name: 'inmyf-user-storage',
-      partialize: (state) => ({
-        // 不再持久化 emotionRecords，改从 Supabase 获取
-      }),
     }
-  )
+  },
+  {
+    name: 'inmyf-user-storage',
+    partialize: (state) => ({
+      // 不再持久化 emotionRecords，改从 Supabase 获取
+    }),
+  }
+)
 )

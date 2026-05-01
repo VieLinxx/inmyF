@@ -106,7 +106,12 @@ export default function Ocean() {
 
   const handleThrow = useCallback(
     async (content) => {
-      if (!userId) return
+      if (!userId) throw new Error('请先登录')
+
+      // 诊断日志：确认用户会话状态
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[Ocean] session:', session ? 'exists' : 'null')
+      console.log('[Ocean] userId:', userId)
 
       const { data, error } = await supabase
         .from('bottles')
@@ -117,15 +122,14 @@ export default function Ocean() {
           pos_z: (Math.random() - 0.5) * 10,
         })
         .select()
-        .single()
 
-      if (error) {
-        console.error('throw bottle error:', error)
-        return
-      }
+      console.log('[Ocean] insert result:', { data, error })
+
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('插入后未返回数据')
 
       const newBottle = {
-        ...data,
+        ...data[0],
         likes: 0,
         likedByMe: false,
         replies: [],
@@ -145,7 +149,7 @@ export default function Ocean() {
 
   const handleLike = useCallback(
     async (id) => {
-      if (!userId) return
+      if (!userId) throw new Error('请先登录')
       const bottle = bottles.find((b) => b.id === id)
       if (bottle?.likedByMe) return
 
@@ -178,7 +182,7 @@ export default function Ocean() {
 
   const handleReply = useCallback(
     async (id, content) => {
-      if (!userId) return
+      if (!userId) throw new Error('请先登录')
 
       const { data, error } = await supabase
         .from('bottle_replies')
