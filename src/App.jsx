@@ -62,12 +62,19 @@ function GuestGuard() {
 }
 
 function App() {
-  const initAuth = useUserStore((state) => state.initAuth)
-  const subscribeAuth = useUserStore((state) => state.subscribeAuth)
-
   useEffect(() => {
-    // 初始化：恢复 Supabase 会话
-    initAuth()
+    // 在 effect 内直接读取 store，避免依赖数组不稳定问题
+    const { initAuth, subscribeAuth } = useUserStore.getState()
+
+    // 启动初始化（正确 await）
+    const init = async () => {
+      try {
+        await initAuth()
+      } catch (error) {
+        console.error('Failed to initialize auth:', error)
+      }
+    }
+    init()
 
     // 订阅认证状态变化
     const listener = subscribeAuth()
@@ -75,7 +82,19 @@ function App() {
     return () => {
       listener.subscription.unsubscribe()
     }
-  }, [initAuth, subscribeAuth])
+  }, [])
+
+  // 独立超时保护：5 秒强制解除 loading，绝不让用户干等
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const { isAuthReady } = useUserStore.getState()
+      if (!isAuthReady) {
+        console.warn('Auth init timeout after 5s, forcing ready')
+        useUserStore.setState({ isAuthReady: true })
+      }
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <BrowserRouter>
