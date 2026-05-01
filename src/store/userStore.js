@@ -18,26 +18,32 @@ export const useUserStore = create(
 
       // ===== 初始化：恢复 Supabase 会话 =====
       initAuth: async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle()
 
-          set({
-            user: {
-              id: session.user.id,
-              email: session.user.email,
-              nickname: profile?.nickname || session.user.email?.split('@')[0],
-              avatarEmoji: profile?.avatar_emoji || '😎',
-              avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
-            },
-            isLoggedIn: true,
-            isAuthReady: true,
-          })
-        } else {
+            set({
+              user: {
+                id: session.user.id,
+                email: session.user.email,
+                nickname: profile?.nickname || session.user.email?.split('@')[0],
+                avatarEmoji: profile?.avatar_emoji || '😎',
+                avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+              },
+              isLoggedIn: true,
+              isAuthReady: true,
+            })
+          } else {
+            set({ isAuthReady: true })
+          }
+        } catch (err) {
+          console.error('initAuth error:', err)
+          // 无论发生什么，必须解除加载状态
           set({ isAuthReady: true })
         }
       },
@@ -46,26 +52,30 @@ export const useUserStore = create(
       subscribeAuth: () => {
         const { data: listener } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
+            try {
+              if (event === 'SIGNED_IN' && session?.user) {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .maybeSingle()
 
-              set({
-                user: {
-                  id: session.user.id,
-                  email: session.user.email,
-                  nickname: profile?.nickname || session.user.email?.split('@')[0],
-                  avatarEmoji: profile?.avatar_emoji || '😎',
-                  avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
-                },
-                isLoggedIn: true,
-              })
-            }
-            if (event === 'SIGNED_OUT') {
-              set({ user: null, isLoggedIn: false })
+                set({
+                  user: {
+                    id: session.user.id,
+                    email: session.user.email,
+                    nickname: profile?.nickname || session.user.email?.split('@')[0],
+                    avatarEmoji: profile?.avatar_emoji || '😎',
+                    avatarColor: profile?.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                  },
+                  isLoggedIn: true,
+                })
+              }
+              if (event === 'SIGNED_OUT') {
+                set({ user: null, isLoggedIn: false })
+              }
+            } catch (err) {
+              console.error('auth state change error:', err)
             }
           }
         )
