@@ -194,18 +194,36 @@ export default function Friends() {
     )
   }, [])
 
+  // 当前用户的邀请码（UUID 后6位）
+  const myInviteCode = userId ? userId.slice(-6).toLowerCase() : ''
+
   // ===== 添加好友 =====
   const handleAddFriend = useCallback(async (code) => {
     if (!userId) return
-    const suffix = code.toLowerCase()
+    const suffix = code.toLowerCase().trim()
 
-    // 通过邀请码（UUID 后6位）查找用户
-    const { data: targets, error } = await supabase
+    if (suffix === myInviteCode) {
+      alert('不能添加自己为好友')
+      return
+    }
+
+    // UUID 类型不支持 ilike，先拉取再过滤（小型应用够用）
+    const { data: allProfiles, error } = await supabase
       .from('profiles')
       .select('id, nickname')
-      .ilike('id', `%${suffix}`)
+      .limit(1000)
 
-    if (error || !targets?.length) {
+    if (error) {
+      console.error('search profiles error:', error)
+      alert('查找失败，请重试')
+      return
+    }
+
+    const targets = (allProfiles || []).filter((p) =>
+      p.id.toLowerCase().endsWith(suffix)
+    )
+
+    if (!targets.length) {
       alert('未找到该用户，请检查邀请码')
       return
     }
@@ -216,10 +234,6 @@ export default function Friends() {
     }
 
     const target = targets[0]
-    if (target.id === userId) {
-      alert('不能添加自己为好友')
-      return
-    }
 
     // 检查是否已经是好友
     const { data: existing } = await supabase
@@ -233,10 +247,13 @@ export default function Friends() {
       return
     }
 
-    // 插入好友关系（trigger 会自动创建反向记录）
+    // 插入双向好友关系
     const { error: insertError } = await supabase
       .from('friendships')
-      .insert({ user_id: userId, friend_id: target.id, intimacy: 0 })
+      .insert([
+        { user_id: userId, friend_id: target.id, intimacy: 0 },
+        { user_id: target.id, friend_id: userId, intimacy: 0 },
+      ])
 
     if (insertError) {
       console.error('add friend error:', insertError)
@@ -244,9 +261,8 @@ export default function Friends() {
       return
     }
 
-    // 刷新好友列表
     loadFriends()
-  }, [userId, loadFriends])
+  }, [userId, myInviteCode, loadFriends])
 
   return (
     <div
