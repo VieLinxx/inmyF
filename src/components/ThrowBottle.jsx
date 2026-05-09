@@ -13,13 +13,21 @@ import { Plus, Send, X } from 'lucide-react'
 export default function ThrowBottle({ onThrow }) {
   const [open, setOpen] = useState(false)
   const [content, setContent] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const text = content.trim()
-    if (!text) return
-    onThrow?.(text)
-    setContent('')
-    setOpen(false)
+    if (!text || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onThrow?.(text)
+      setContent('')
+      setOpen(false)
+    } catch (err) {
+      alert(err.message || '发布失败，请检查网络或重新登录')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -159,11 +167,11 @@ export default function ThrowBottle({ onThrow }) {
                       transition: 'all 0.3s ease',
                     }}
                     onClick={handleSubmit}
-                    disabled={!content.trim()}
-                    whileTap={content.trim() ? { scale: 0.97 } : {}}
+                    disabled={!content.trim() || isSubmitting}
+                    whileTap={content.trim() && !isSubmitting ? { scale: 0.97 } : {}}
                   >
                     <Send size={18} />
-                    扔进大海
+                    {isSubmitting ? '发布中...' : '扔进大海'}
                   </motion.button>
                 </div>
               </motion.div>
