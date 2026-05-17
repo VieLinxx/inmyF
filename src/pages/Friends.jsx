@@ -213,15 +213,24 @@ export default function Friends() {
       .select('id, nickname')
       .limit(1000)
 
+    console.log('[addFriend] profiles returned:', allProfiles?.length || 0, 'error:', error)
+
     if (error) {
       console.error('search profiles error:', error)
-      alert('查找失败，请重试')
+      alert('查找失败: ' + error.message)
+      return
+    }
+
+    if (!allProfiles || allProfiles.length === 0) {
+      alert('无法获取用户列表，可能是权限设置问题')
       return
     }
 
     const targets = (allProfiles || []).filter((p) =>
       p.id.toLowerCase().endsWith(suffix)
     )
+
+    console.log('[addFriend] targets found:', targets.length, 'searching suffix:', suffix)
 
     if (!targets.length) {
       alert('未找到该用户，请检查邀请码')
@@ -234,33 +243,40 @@ export default function Friends() {
     }
 
     const target = targets[0]
+    console.log('[addFriend] target user:', target.id, target.nickname)
 
     // 检查是否已经是好友
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('friendships')
       .select('id')
       .match({ user_id: userId, friend_id: target.id })
       .maybeSingle()
+
+    if (existingError) {
+      console.error('check existing friend error:', existingError)
+    }
 
     if (existing) {
       alert('你们已经是好友了')
       return
     }
 
-    // 插入双向好友关系
+    // 插入单向好友关系，数据库 trigger 会自动创建反向记录
     const { error: insertError } = await supabase
       .from('friendships')
-      .insert([
-        { user_id: userId, friend_id: target.id, intimacy: 0 },
-        { user_id: target.id, friend_id: userId, intimacy: 0 },
-      ])
+      .insert({
+        user_id: userId,
+        friend_id: target.id,
+        intimacy: 0,
+      })
 
     if (insertError) {
       console.error('add friend error:', insertError)
-      alert('添加失败，请重试')
+      alert('添加失败: ' + insertError.message)
       return
     }
 
+    alert('添加成功！')
     loadFriends()
   }, [userId, myInviteCode, loadFriends])
 
