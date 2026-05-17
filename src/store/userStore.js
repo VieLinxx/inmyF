@@ -120,14 +120,20 @@ export const useUserStore = create(
               data: { nickname },
             },
           })
-          if (error) throw error
+          if (error) {
+            console.error('[signUp] Supabase error:', error)
+            throw error
+          }
+
+          console.log('[signUp] success, user:', data.user?.id, 'session:', !!data.session)
 
           // profile 由数据库 trigger 自动创建，这里手动更新昵称
           if (data.user) {
-            await supabase
+            const { error: updateErr } = await supabase
               .from('profiles')
               .update({ nickname })
               .eq('id', data.user.id)
+            if (updateErr) console.error('[signUp] profile update error:', updateErr)
           }
 
           return data
@@ -139,7 +145,11 @@ export const useUserStore = create(
             email,
             password,
           })
-          if (error) throw error
+          if (error) {
+            console.error('[signIn] Supabase error:', error)
+            throw error
+          }
+          console.log('[signIn] success, user:', data.user?.id)
 
           // 登录成功后直接设置状态，不依赖 onAuthStateChange
           if (data.user) {
