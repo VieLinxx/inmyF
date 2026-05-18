@@ -10,7 +10,7 @@ import SplashScreen from './components/SplashScreen'
 import { useUserStore } from './store/userStore'
 
 // 构建版本标记，修改此值强制 Vite 重新生成 hash
-console.log('[App] build v20250519-4 设置弹窗居中避免键盘遮挡')
+console.log('[App] build v20250519-5 设置改为全屏页面')
 
 /* ============================================
    路由守卫
