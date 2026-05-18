@@ -70,6 +70,7 @@ export default function Friends() {
   // ===== 加载收到的好友申请 =====
   const loadFriendRequests = useCallback(async () => {
     if (!userId) return
+    console.log('[loadFriendRequests] userId:', userId)
     const { data, error } = await supabase
       .from('friendships')
       .select(`
@@ -81,6 +82,8 @@ export default function Friends() {
       .eq('friend_id', userId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
+
+    console.log('[loadFriendRequests] data:', data?.length, 'error:', error)
 
     if (error) {
       console.error('load friend requests error:', error)
@@ -97,6 +100,7 @@ export default function Friends() {
       read: false,
     }))
 
+    console.log('[loadFriendRequests] formatted:', formatted)
     setFriendRequests(formatted)
   }, [userId])
 
@@ -238,7 +242,11 @@ export default function Friends() {
 
   // ===== 添加好友：发送申请 =====
   const handleAddFriend = useCallback(async (code) => {
-    if (!userId) return
+    console.log('[handleAddFriend] start, userId:', userId, 'code:', code)
+    if (!userId) {
+      alert('请先登录')
+      return
+    }
     const suffix = code.toLowerCase().trim()
 
     if (suffix === myInviteCode) {
@@ -251,6 +259,8 @@ export default function Friends() {
       .from('profiles')
       .select('id, nickname')
       .limit(1000)
+
+    console.log('[handleAddFriend] profiles:', allProfiles?.length, 'error:', error)
 
     if (error) {
       console.error('search profiles error:', error)
@@ -267,6 +277,8 @@ export default function Friends() {
       p.id.toLowerCase().endsWith(suffix)
     )
 
+    console.log('[handleAddFriend] targets:', targets.length)
+
     if (!targets.length) {
       alert('未找到该用户，请检查邀请码')
       return
@@ -278,6 +290,7 @@ export default function Friends() {
     }
 
     const target = targets[0]
+    console.log('[handleAddFriend] target:', target.id, target.nickname)
 
     // 检查是否已经是好友
     const { data: existingAccepted } = await supabase
@@ -287,6 +300,8 @@ export default function Friends() {
       .eq('friend_id', target.id)
       .eq('status', 'accepted')
       .maybeSingle()
+
+    console.log('[handleAddFriend] existingAccepted:', existingAccepted)
 
     if (existingAccepted) {
       alert('你们已经是好友了')
@@ -302,13 +317,16 @@ export default function Friends() {
       .eq('status', 'pending')
       .maybeSingle()
 
+    console.log('[handleAddFriend] existingPending:', existingPending)
+
     if (existingPending) {
       alert('你已发送过好友申请，等待对方同意')
       return
     }
 
     // 发送好友申请（单向 pending）
-    const { error: insertError } = await supabase
+    console.log('[handleAddFriend] inserting pending...')
+    const { data: insertData, error: insertError } = await supabase
       .from('friendships')
       .insert({
         user_id: userId,
@@ -316,6 +334,9 @@ export default function Friends() {
         intimacy: 0,
         status: 'pending',
       })
+      .select()
+
+    console.log('[handleAddFriend] insert result:', { insertData, insertError })
 
     if (insertError) {
       console.error('send friend request error:', insertError)
