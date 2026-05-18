@@ -273,7 +273,7 @@ export default function Friends() {
       return
     }
 
-    const targets = (allProfiles || []).filter((p) =
+    const targets = (allProfiles || []).filter((p) =>
       p.id.toLowerCase().endsWith(suffix)
     )
 
