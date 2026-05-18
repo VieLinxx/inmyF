@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, UserPlus, Users, MessageCircleQuestion } from 'lucide-react'
+import { Search, UserPlus, Users, MessageCircleQuestion, UserCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import FriendCard from '../components/FriendCard'
@@ -8,6 +8,7 @@ import AddFriend from '../components/AddFriend'
 import AnonymousQuestion from '../components/AnonymousQuestion'
 import EditRemark from '../components/EditRemark'
 import InboxQModal from '../components/InboxQModal'
+import FriendRequestInbox from '../components/FriendRequestInbox'
 
 /* ============================================
    Friends 好友页面 — Supabase 版
@@ -26,12 +27,15 @@ export default function Friends() {
   const [remarkOpen, setRemarkOpen] = useState(false)
   const [inboxQOpen, setInboxQOpen] = useState(false)
   const [inboxQItems, setInboxQItems] = useState([])
+  const [friendRequests, setFriendRequests] = useState([])
+  const [inboxFriendOpen, setInboxFriendOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   const remainingQuestions = Math.max(0, 3 - todayQuestions)
   const inboxQUnread = inboxQItems.filter((i) => !i.read).length
+  const friendRequestUnread = friendRequests.filter((r) => !r.read).length
 
-  // ===== 加载好友列表 =====
+  // ===== 加载已同意的好友列表 =====
   const loadFriends = useCallback(async () => {
     if (!userId) return
     const { data, error } = await supabase
@@ -43,6 +47,7 @@ export default function Friends() {
         friend:profiles!friend_id(id, nickname, avatar_emoji, avatar_color)
       `)
       .eq('user_id', userId)
+      .eq('status', 'accepted')
 
     if (error) {
       console.error('load friends error:', error)
@@ -60,6 +65,39 @@ export default function Friends() {
 
     setFriends(formatted)
     setIsLoading(false)
+  }, [userId])
+
+  // ===== 加载收到的好友申请 =====
+  const loadFriendRequests = useCallback(async () => {
+    if (!userId) return
+    const { data, error } = await supabase
+      .from('friendships')
+      .select(`
+        id,
+        user_id,
+        created_at,
+        sender:profiles!user_id(id, nickname, avatar_emoji, avatar_color)
+      `)
+      .eq('friend_id', userId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('load friend requests error:', error)
+      return
+    }
+
+    const formatted = (data || []).map((r) => ({
+      id: r.id,
+      senderId: r.user_id,
+      senderName: r.sender?.nickname || '未知用户',
+      senderEmoji: r.sender?.avatar_emoji,
+      senderAvatar: r.sender?.avatar_color,
+      created_at: r.created_at,
+      read: false,
+    }))
+
+    setFriendRequests(formatted)
   }, [userId])
 
   // ===== 加载匿名提问箱 =====
@@ -124,7 +162,8 @@ export default function Friends() {
     loadFriends()
     loadInbox()
     loadTodayQuestions()
-  }, [loadFriends, loadInbox, loadTodayQuestions])
+    loadFriendRequests()
+  }, [loadFriends, loadInbox, loadTodayQuestions, loadFriendRequests])
 
   const filteredFriends = useMemo(() => {
     if (!search.trim()) return friends
@@ -197,7 +236,7 @@ export default function Friends() {
   // 当前用户的邀请码（UUID 后6位）
   const myInviteCode = userId ? userId.slice(-6).toLowerCase() : ''
 
-  // ===== 添加好友 =====
+  // ===== 添加好友：发送申请 =====
   const handleAddFriend = useCallback(async (code) => {
     if (!userId) return
     const suffix = code.toLowerCase().trim()
@@ -213,8 +252,6 @@ export default function Friends() {
       .select('id, nickname')
       .limit(1000)
 
-    console.log('[addFriend] profiles returned:', allProfiles?.length || 0, 'error:', error)
-
     if (error) {
       console.error('search profiles error:', error)
       alert('查找失败: ' + error.message)
@@ -226,11 +263,9 @@ export default function Friends() {
       return
     }
 
-    const targets = (allProfiles || []).filter((p) =>
+    const targets = (allProfiles || []).filter((p) =
       p.id.toLowerCase().endsWith(suffix)
     )
-
-    console.log('[addFriend] targets found:', targets.length, 'searching suffix:', suffix)
 
     if (!targets.length) {
       alert('未找到该用户，请检查邀请码')
@@ -243,41 +278,121 @@ export default function Friends() {
     }
 
     const target = targets[0]
-    console.log('[addFriend] target user:', target.id, target.nickname)
 
     // 检查是否已经是好友
-    const { data: existing, error: existingError } = await supabase
+    const { data: existingAccepted } = await supabase
       .from('friendships')
       .select('id')
-      .match({ user_id: userId, friend_id: target.id })
+      .eq('user_id', userId)
+      .eq('friend_id', target.id)
+      .eq('status', 'accepted')
       .maybeSingle()
 
-    if (existingError) {
-      console.error('check existing friend error:', existingError)
-    }
-
-    if (existing) {
+    if (existingAccepted) {
       alert('你们已经是好友了')
       return
     }
 
-    // 插入双向好友关系
-    const { error: insertError } = await supabase
+    // 检查是否已发送过申请
+    const { data: existingPending } = await supabase
       .from('friendships')
-      .insert([
-        { user_id: userId, friend_id: target.id, intimacy: 0 },
-        { user_id: target.id, friend_id: userId, intimacy: 0 },
-      ])
+      .select('id')
+      .eq('user_id', userId)
+      .eq('friend_id', target.id)
+      .eq('status', 'pending')
+      .maybeSingle()
 
-    if (insertError) {
-      console.error('add friend error:', insertError)
-      alert('添加失败: ' + insertError.message)
+    if (existingPending) {
+      alert('你已发送过好友申请，等待对方同意')
       return
     }
 
-    alert('添加成功！')
+    // 发送好友申请（单向 pending）
+    const { error: insertError } = await supabase
+      .from('friendships')
+      .insert({
+        user_id: userId,
+        friend_id: target.id,
+        intimacy: 0,
+        status: 'pending',
+      })
+
+    if (insertError) {
+      console.error('send friend request error:', insertError)
+      alert('发送申请失败: ' + insertError.message)
+      return
+    }
+
+    alert('好友申请已发送！')
+  }, [userId, myInviteCode])
+
+  // ===== 同意好友申请 =====
+  const handleAcceptRequest = useCallback(async (requestId) => {
+    if (!userId) return
+
+    // 获取申请记录
+    const { data: request, error: fetchError } = await supabase
+      .from('friendships')
+      .select('user_id, friend_id')
+      .eq('id', requestId)
+      .eq('status', 'pending')
+      .single()
+
+    if (fetchError || !request) {
+      alert('申请不存在或已处理')
+      loadFriendRequests()
+      return
+    }
+
+    const senderId = request.user_id
+
+    // 更新申请为 accepted
+    const { error: updateError } = await supabase
+      .from('friendships')
+      .update({ status: 'accepted' })
+      .eq('id', requestId)
+
+    if (updateError) {
+      alert('操作失败: ' + updateError.message)
+      return
+    }
+
+    // 插入反向 accepted 记录
+    const { error: insertError } = await supabase
+      .from('friendships')
+      .insert({
+        user_id: userId,
+        friend_id: senderId,
+        intimacy: 0,
+        status: 'accepted',
+      })
+
+    if (insertError) {
+      console.error('insert reverse friendship error:', insertError)
+      // 即使反向插入失败，也不回滚，让用户手动处理
+    }
+
+    setFriendRequests((prev) => prev.filter((r) => r.id !== requestId))
     loadFriends()
-  }, [userId, myInviteCode, loadFriends])
+  }, [userId, loadFriends, loadFriendRequests])
+
+  // ===== 拒绝好友申请 =====
+  const handleRejectRequest = useCallback(async (requestId) => {
+    if (!userId) return
+
+    const { error } = await supabase
+      .from('friendships')
+      .delete()
+      .eq('id', requestId)
+      .eq('status', 'pending')
+
+    if (error) {
+      alert('操作失败: ' + error.message)
+      return
+    }
+
+    setFriendRequests((prev) => prev.filter((r) => r.id !== requestId))
+  }, [userId])
 
   return (
     <div
@@ -362,6 +477,38 @@ export default function Friends() {
             </p>
           </div>
           <div className="flex items-center gap-2.5">
+            {/* 好友申请收件箱 */}
+            <motion.button
+              className="relative flex items-center justify-center"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(12px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
+                color: '#2a3a4a',
+              }}
+              onClick={() => setInboxFriendOpen(true)}
+              whileTap={{ scale: 0.9 }}
+            >
+              <UserCheck size={22} strokeWidth={2} />
+              {friendRequestUnread > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold"
+                  style={{
+                    background: 'linear-gradient(135deg, #e6a817 0%, #f0c040 100%)',
+                    color: '#fff',
+                    boxShadow: '0 2px 6px rgba(230, 168, 23, 0.4)',
+                  }}
+                >
+                  {friendRequestUnread}
+                </span>
+              )}
+            </motion.button>
+
             {/* 匿名提问收件箱 */}
             <motion.button
               className="relative flex items-center justify-center"
@@ -519,6 +666,15 @@ export default function Friends() {
         onClose={() => setInboxQOpen(false)}
         onRead={handleInboxQRead}
         onReply={handleInboxQReply}
+      />
+
+      {/* 好友申请收件箱 */}
+      <FriendRequestInbox
+        items={friendRequests}
+        isOpen={inboxFriendOpen}
+        onClose={() => setInboxFriendOpen(false)}
+        onAccept={handleAcceptRequest}
+        onReject={handleRejectRequest}
       />
     </div>
   )
