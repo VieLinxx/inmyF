@@ -61,6 +61,7 @@ export const useUserStore = create(
                   nickname: profile.nickname || session.user.email?.split('@')[0],
                   avatarEmoji: profile.avatar_emoji || '😎',
                   avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                  bio: profile.bio || '',
                 },
                 isLoggedIn: true,
                 isAuthReady: true,
@@ -95,6 +96,7 @@ export const useUserStore = create(
                         nickname: profile.nickname || session.user.email?.split('@')[0],
                         avatarEmoji: profile.avatar_emoji || '😎',
                         avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                        bio: profile.bio || '',
                       },
                       isLoggedIn: true,
                     })
@@ -166,6 +168,7 @@ export const useUserStore = create(
                 nickname: profile.nickname || data.user.email?.split('@')[0],
                 avatarEmoji: profile.avatar_emoji || '😎',
                 avatarColor: profile.avatar_color || 'linear-gradient(135deg, #4361EE 0%, #3A0CA3 100%)',
+                bio: profile.bio || '',
               },
               isLoggedIn: true,
             })
@@ -187,6 +190,7 @@ export const useUserStore = create(
 
         const dbUpdates = {}
         if (updates.nickname !== undefined) dbUpdates.nickname = updates.nickname
+        if (updates.bio !== undefined) dbUpdates.bio = updates.bio
         if (updates.avatarEmoji !== undefined) dbUpdates.avatar_emoji = updates.avatarEmoji
         if (updates.avatarColor !== undefined) dbUpdates.avatar_color = updates.avatarColor
 

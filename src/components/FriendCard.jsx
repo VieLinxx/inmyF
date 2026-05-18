@@ -131,6 +131,22 @@ export default function FriendCard({ friend, onDelete, onAskQuestion, onEditRema
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
+            {/* 个性签名 */}
+            {friend.bio && (
+              <div
+                className="flex items-start gap-2 mb-4 px-3 py-2.5"
+                style={{
+                  background: 'rgba(102, 126, 234, 0.06)',
+                  borderRadius: 12,
+                  border: '1px solid rgba(102, 126, 234, 0.1)',
+                }}
+              >
+                <span className="text-xs leading-relaxed" style={{ color: '#667eea' }}>
+                  “{friend.bio}”
+                </span>
+              </div>
+            )}
+
             {/* 大号默契值 */}
             <div className="flex items-center justify-center gap-2 mb-4">
               <Sparkles size={24} style={{ color: '#e6a817' }} />

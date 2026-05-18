@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, UserPlus, Users, MessageCircleQuestion, UserCheck } from 'lucide-react'
+import { Search, UserPlus, Users, MessageCircleQuestion, UserCheck, Settings } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import FriendCard from '../components/FriendCard'
@@ -9,6 +9,7 @@ import AnonymousQuestion from '../components/AnonymousQuestion'
 import EditRemark from '../components/EditRemark'
 import InboxQModal from '../components/InboxQModal'
 import FriendRequestInbox from '../components/FriendRequestInbox'
+import UserSettings from '../components/UserSettings'
 
 /* ============================================
    Friends 好友页面 — Supabase 版
@@ -29,6 +30,7 @@ export default function Friends() {
   const [inboxQItems, setInboxQItems] = useState([])
   const [friendRequests, setFriendRequests] = useState([])
   const [inboxFriendOpen, setInboxFriendOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   const remainingQuestions = Math.max(0, 3 - todayQuestions)
@@ -44,7 +46,7 @@ export default function Friends() {
         id,
         intimacy,
         remark,
-        friend:profiles!friend_id(id, nickname, avatar_emoji, avatar_color)
+        friend:profiles!friend_id(id, nickname, avatar_emoji, avatar_color, bio)
       `)
       .eq('user_id', userId)
       .eq('status', 'accepted')
@@ -59,6 +61,7 @@ export default function Friends() {
       nickname: f.friend.nickname,
       avatarEmoji: f.friend.avatar_emoji,
       avatarColor: f.friend.avatar_color,
+      bio: f.friend.bio || '',
       intimacy: f.intimacy,
       remark: f.remark,
     }))
@@ -239,6 +242,13 @@ export default function Friends() {
 
   // 当前用户的邀请码（UUID 后6位）
   const myInviteCode = userId ? userId.slice(-6).toLowerCase() : ''
+
+  // ===== 保存个人设置 =====
+  const handleSaveSettings = useCallback(async ({ nickname, bio }) => {
+    const updateUser = useUserStore.getState().updateUser
+    await updateUser({ nickname, bio })
+    alert('设置已保存！')
+  }, [])
 
   // ===== 添加好友：发送申请 =====
   const handleAddFriend = useCallback(async (code) => {
@@ -498,6 +508,26 @@ export default function Friends() {
             </p>
           </div>
           <div className="flex items-center gap-2.5">
+            {/* 个人设置 */}
+            <motion.button
+              className="flex items-center justify-center"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(12px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(160%)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
+                color: '#2a3a4a',
+              }}
+              onClick={() => setSettingsOpen(true)}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Settings size={22} strokeWidth={2} />
+            </motion.button>
+
             {/* 好友申请收件箱 */}
             <motion.button
               className="relative flex items-center justify-center"
@@ -696,6 +726,14 @@ export default function Friends() {
         onClose={() => setInboxFriendOpen(false)}
         onAccept={handleAcceptRequest}
         onReject={handleRejectRequest}
+      />
+
+      {/* 个人设置 */}
+      <UserSettings
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        user={user}
+        onSave={handleSaveSettings}
       />
     </div>
   )
