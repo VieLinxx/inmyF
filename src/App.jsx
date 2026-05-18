@@ -10,7 +10,7 @@ import SplashScreen from './components/SplashScreen'
 import { useUserStore } from './store/userStore'
 
 // 构建版本标记，修改此值强制 Vite 重新生成 hash
-console.log('[App] build v20250519-3 添加个人设置（昵称+签名）')
+console.log('[App] build v20250519-4 设置弹窗居中避免键盘遮挡')
 
 /* ============================================
    路由守卫
