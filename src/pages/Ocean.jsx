@@ -30,29 +30,46 @@ export default function Ocean() {
 
   // ===== 加载漂流瓶列表 =====
   const loadBottles = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('bottles')
-      .select(`
-        *,
-        replies:bottle_replies(id, content, created_at),
-        likes:bottle_likes(user_id)
-      `)
-      .order('created_at', { ascending: false })
+    const [
+      { data: bottlesData, error: bottlesError },
+      { data: repliesData, error: repliesError },
+    ] = await Promise.all([
+      supabase
+        .from('bottles')
+        .select(`*, likes:bottle_likes(user_id)`)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('bottle_replies')
+        .select('id, bottle_id, content, created_at')
+        .order('created_at', { ascending: true }),
+    ])
 
-    if (error) {
-      console.error('load bottles error:', error)
+    if (bottlesError) {
+      console.error('load bottles error:', bottlesError)
       return
     }
+    if (repliesError) {
+      console.error('load replies error:', repliesError)
+    }
 
-    console.log('[Ocean] raw bottles:', data?.length, 'first replies:', data?.[0]?.replies)
+    // 按 bottle_id 分组 replies
+    const repliesByBottle = {}
+    for (const reply of repliesData || []) {
+      if (!repliesByBottle[reply.bottle_id]) {
+        repliesByBottle[reply.bottle_id] = []
+      }
+      repliesByBottle[reply.bottle_id].push(reply)
+    }
 
-    const processed = (data || []).map((b) => ({
+    console.log('[Ocean] bottles:', bottlesData?.length, 'replies:', repliesData?.length)
+
+    const processed = (bottlesData || []).map((b) => ({
       ...b,
       x: b.pos_x,
       z: b.pos_z,
       likes: b.likes?.length || 0,
       likedByMe: b.likes?.some((l) => l.user_id === userId) || false,
-      replies: b.replies || [],
+      replies: repliesByBottle[b.id] || [],
     }))
 
     setBottles(processed)
@@ -198,7 +215,7 @@ export default function Ocean() {
 
       if (error) {
         console.error('reply error:', error)
-        return
+        throw error
       }
 
       const newReply = {
@@ -219,6 +236,8 @@ export default function Ocean() {
             : prev
         )
       }
+
+      return newReply
     },
     [userId, selectedBottle]
   )
@@ -339,7 +358,7 @@ export default function Ocean() {
         key={selectedBottle?.id || 'empty'}
         bottle={selectedBottle}
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setSelectedBottle(null) }}
         onLike={handleLike}
         onReply={handleReply}
       />

@@ -52,16 +52,28 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
     const text = replyText.trim()
     if (!text || isReplying) return
     setIsReplying(true)
+
+    // 乐观更新：先添加临时评论到本地（即时 UI 反馈）
+    const tempId = `temp_${Date.now()}`
+    const tempReply = {
+      id: tempId,
+      content: text,
+      created_at: new Date().toISOString(),
+    }
+    setLocalReplies((prev) => [...prev, tempReply])
+    setReplyText('')
+
     try {
-      await onReply?.(bottle.id, text)
-      const newReply = {
-        id: `reply_${Date.now()}`,
-        content: text,
-        created_at: new Date().toISOString(),
+      const savedReply = await onReply?.(bottle.id, text)
+      if (savedReply) {
+        // 用服务端返回的正式数据替换临时评论
+        setLocalReplies((prev) =>
+          prev.map((r) => (r.id === tempId ? savedReply : r))
+        )
       }
-      setLocalReplies((prev) => [...prev, newReply])
-      setReplyText('')
     } catch (err) {
+      // 回滚：移除临时评论
+      setLocalReplies((prev) => prev.filter((r) => r.id !== tempId))
       alert(err.message || '回复失败，请检查网络或重新登录')
     } finally {
       setIsReplying(false)
