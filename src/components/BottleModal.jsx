@@ -31,12 +31,13 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
   // 当 bottle 变化时同步内部 state，避免上一个瓶子的数据残留
   useEffect(() => {
     if (bottle) {
+      console.log('[BottleModal] bottle changed:', bottle.id, 'replies:', bottle.replies?.length)
       setLiked(bottle.likedByMe || false)
       setLikeCount(bottle.likes || 0)
       setLocalReplies(bottle.replies || [])
       setReplyText('')
     }
-  }, [bottle])
+  }, [bottle?.id])
 
   if (!bottle) return null
 

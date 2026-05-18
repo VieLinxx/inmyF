@@ -51,11 +51,12 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
 
           {/* 底部抽屉弹窗 */}
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-[70] flex flex-col"
+            className="fixed bottom-0 z-[70] flex flex-col"
             style={{
+              left: '50%',
+              transform: 'translateX(-50%)',
               width: '100%',
               maxWidth: '430px',
-              margin: '0 auto',
               maxHeight: '85dvh',
               borderRadius: '28px 28px 0 0',
               background: 'rgba(255, 255, 255, 0.96)',

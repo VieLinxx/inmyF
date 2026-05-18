@@ -34,7 +34,7 @@ export default function Ocean() {
       .from('bottles')
       .select(`
         *,
-        bottle_replies(id, content, created_at),
+        replies:bottle_replies(id, content, created_at),
         likes:bottle_likes(user_id)
       `)
       .order('created_at', { ascending: false })
@@ -44,13 +44,15 @@ export default function Ocean() {
       return
     }
 
+    console.log('[Ocean] raw bottles:', data?.length, 'first replies:', data?.[0]?.replies)
+
     const processed = (data || []).map((b) => ({
       ...b,
       x: b.pos_x,
       z: b.pos_z,
       likes: b.likes?.length || 0,
       likedByMe: b.likes?.some((l) => l.user_id === userId) || false,
-      replies: b.bottle_replies || [],
+      replies: b.replies || [],
     }))
 
     setBottles(processed)
@@ -332,8 +334,9 @@ export default function Ocean() {
       {/* 扔瓶子按钮 */}
       <ThrowBottle onThrow={handleThrow} />
 
-      {/* 瓶子详情弹窗 */}
+      {/* 瓶子详情弹窗 — key 强制重新挂载，彻底避免串瓶 */}
       <BottleModal
+        key={selectedBottle?.id || 'empty'}
         bottle={selectedBottle}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
