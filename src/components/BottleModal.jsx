@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThumbsUp, ThumbsDown, MessageCircle, X, Send } from 'lucide-react'
@@ -22,11 +22,21 @@ function timeAgo(dateStr) {
 }
 
 export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }) {
-  const [liked, setLiked] = useState(bottle?.likedByMe || false)
-  const [likeCount, setLikeCount] = useState(bottle?.likes || 0)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
   const [replyText, setReplyText] = useState('')
-  const [localReplies, setLocalReplies] = useState(bottle?.replies || [])
+  const [localReplies, setLocalReplies] = useState([])
   const [isReplying, setIsReplying] = useState(false)
+
+  // 当 bottle 变化时同步内部 state，避免上一个瓶子的数据残留
+  useEffect(() => {
+    if (bottle) {
+      setLiked(bottle.likedByMe || false)
+      setLikeCount(bottle.likes || 0)
+      setLocalReplies(bottle.replies || [])
+      setReplyText('')
+    }
+  }, [bottle])
 
   if (!bottle) return null
 
