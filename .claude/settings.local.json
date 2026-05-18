@@ -6,7 +6,8 @@
       "Bash(npx vite *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -s \"https://vielinxx.github.io/inmyF/assets/index-CrA7hZqJ.js\")"
     ]
   }
 }
