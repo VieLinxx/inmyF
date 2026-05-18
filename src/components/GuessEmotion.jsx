@@ -50,12 +50,10 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             onClick={onClose}
           />
 
-          {/* 弹窗 — 外层负责动画+水平居中，内层负责内容 */}
+          {/* 弹窗 — 外层负责动画，内层负责水平居中+内容 */}
           <motion.div
             className="fixed bottom-0 left-0 right-0 z-[70] flex justify-center"
             style={{
-              maxWidth: '430px',
-              margin: '0 auto',
               padding: '0 12px',
             }}
             initial={{ y: '100%' }}
@@ -67,6 +65,7 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             <div
               className="flex flex-col w-full"
               style={{
+                maxWidth: '430px',
                 maxHeight: '85dvh',
                 borderRadius: '28px 28px 0 0',
                 background: 'rgba(255, 255, 255, 0.96)',
