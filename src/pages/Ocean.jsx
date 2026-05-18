@@ -30,6 +30,19 @@ export default function Ocean() {
 
   // ===== 加载漂流瓶列表 =====
   const loadBottles = useCallback(async () => {
+    // 清理 3 天前的旧漂流瓶及关联数据
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const { data: expiredBottles } = await supabase
+      .from('bottles')
+      .select('id')
+      .lt('created_at', threeDaysAgo)
+    if (expiredBottles?.length > 0) {
+      const expiredIds = expiredBottles.map((b) => b.id)
+      await supabase.from('bottle_replies').delete().in('bottle_id', expiredIds)
+      await supabase.from('bottle_likes').delete().in('bottle_id', expiredIds)
+      await supabase.from('bottles').delete().in('id', expiredIds)
+    }
+
     const [
       { data: bottlesData, error: bottlesError },
       { data: repliesData, error: repliesError },
@@ -37,6 +50,7 @@ export default function Ocean() {
       supabase
         .from('bottles')
         .select(`*, likes:bottle_likes(user_id)`)
+        .gte('created_at', threeDaysAgo)
         .order('created_at', { ascending: false }),
       supabase
         .from('bottle_replies')

@@ -110,17 +110,6 @@ export default function MomentCard({
           </p>
         </div>
 
-        {/* 照片 */}
-        {moment.image && (
-          <div className="mt-3 rounded-2xl overflow-hidden" style={{ maxHeight: 280 }}>
-            <img
-              src={moment.image}
-              alt="moment"
-              className="w-full h-full object-cover"
-              style={{ maxHeight: 280 }}
-            />
-          </div>
-        )}
       </div>
 
       {/* 操作栏 */}

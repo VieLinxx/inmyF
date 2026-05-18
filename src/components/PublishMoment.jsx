@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, Sparkles, ImagePlus, Trash2 } from 'lucide-react'
+import { X, Send, Sparkles } from 'lucide-react'
 
 /* ============================================
    PublishMoment 发布动态弹窗
@@ -20,35 +20,19 @@ const EMOJIS = [
 export default function PublishMoment({ isOpen, onClose, onSubmit }) {
   const [emoji, setEmoji] = useState(null)
   const [content, setContent] = useState('')
-  const [image, setImage] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const fileRef = useRef(null)
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => setImage(ev.target.result)
-    reader.readAsDataURL(file)
-  }
-
-  const handleRemoveImage = () => {
-    setImage(null)
-    if (fileRef.current) fileRef.current.value = ''
-  }
 
   const handleSubmit = async () => {
     if (!emoji || !content.trim() || isSubmitting) return
     setIsSubmitting(true)
     try {
-      await onSubmit?.({ emoji, content: content.trim(), image })
+      await onSubmit?.({ emoji, content: content.trim() })
       setSubmitted(true)
       setTimeout(() => {
         setSubmitted(false)
         setEmoji(null)
         setContent('')
-        setImage(null)
         onClose()
       }, 1200)
     } catch (err) {
@@ -185,53 +169,6 @@ export default function PublishMoment({ isOpen, onClose, onSubmit }) {
                 {content.length}/200
               </p>
 
-              {/* 照片区域 */}
-              <div className="mt-3">
-                <p className="text-sm font-medium mb-3" style={{ color: '#7a8a9a' }}>
-                  照片（可选）
-                </p>
-                {image ? (
-                  <div className="relative inline-block">
-                    <img
-                      src={image}
-                      alt="preview"
-                      className="rounded-2xl"
-                      style={{ maxHeight: 160, objectFit: 'cover' }}
-                    />
-                    <button
-                      className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center"
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.9)',
-                        boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
-                      }}
-                      onClick={handleRemoveImage}
-                    >
-                      <Trash2 size={14} color="#fff" />
-                    </button>
-                  </div>
-                ) : (
-                  <motion.button
-                    className="flex items-center justify-center gap-2 w-full py-6 rounded-2xl border-2 border-dashed"
-                    style={{
-                      borderColor: 'rgba(180, 190, 200, 0.4)',
-                      color: '#b0b8c4',
-                      background: 'rgba(245, 247, 250, 0.5)',
-                    }}
-                    onClick={() => fileRef.current?.click()}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <ImagePlus size={20} />
-                    <span className="text-sm">添加照片</span>
-                  </motion.button>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </div>
             </div>
 
             {/* 提交按钮 */}

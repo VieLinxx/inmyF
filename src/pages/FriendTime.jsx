@@ -79,7 +79,11 @@ export default function FriendTime() {
     ]
     const allowedIds = [...new Set([currentUserId, ...friendIds])]
 
-    // 2. 查询自己和好友的动态
+    // 2. 清理 24 小时前的旧数据
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    await supabase.from('moments').delete().lt('created_at', oneDayAgo)
+
+    // 3. 查询自己和好友的 24 小时内动态
     const { data, error } = await supabase
       .from('moments')
       .select(
@@ -91,6 +95,7 @@ export default function FriendTime() {
       `
       )
       .in('user_id', allowedIds)
+      .gte('created_at', oneDayAgo)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -189,13 +194,8 @@ export default function FriendTime() {
 
   // ===== 发布动态 =====
   const handlePublish = useCallback(
-    async ({ emoji, content, image }) => {
+    async ({ emoji, content }) => {
       if (!currentUserId) throw new Error('请先登录')
-
-      // 诊断日志
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log('[FriendTime] session:', session ? 'exists' : 'null')
-      console.log('[FriendTime] currentUserId:', currentUserId)
 
       const { data, error } = await supabase
         .from('moments')
@@ -203,7 +203,6 @@ export default function FriendTime() {
           user_id: currentUserId,
           content,
           emotion: emoji,
-          image_url: image || '',
         })
         .select(
           `
@@ -211,8 +210,6 @@ export default function FriendTime() {
           author:profiles!user_id(nickname, avatar_emoji, avatar_color)
         `
         )
-
-      console.log('[FriendTime] insert result:', { data, error })
 
       if (error) {
         console.error('publish error:', error)

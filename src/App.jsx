@@ -10,7 +10,7 @@ import SplashScreen from './components/SplashScreen'
 import { useUserStore } from './store/userStore'
 
 // 构建版本标记，修改此值强制 Vite 重新生成 hash
-console.log('[App] build v20250519-5 设置改为全屏页面')
+console.log('[App] build v20250519-6 24h/3d时效+移除图片上传')
 
 /* ============================================
    路由守卫
