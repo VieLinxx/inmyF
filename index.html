@@ -9,6 +9,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#ffffff" />
     <title>inmyF - 我的感受也很重要</title>
+    <script>
+      // GitHub Pages SPA fallback: 从 404.html 恢复原始路由
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          var url = new URL(redirect);
+          var path = url.pathname.replace('/inmyF/', '');
+          if (path && !path.startsWith('#')) {
+            history.replaceState(null, null, '/inmyF/#' + path + url.hash);
+          }
+        }
+      })();
+    </script>
     <script type="module" crossorigin src="/assets/index-Cw852m_a.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CxTQnBVr.css">
   </head>
