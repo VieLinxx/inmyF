@@ -261,14 +261,13 @@ export default function Friends() {
       return
     }
 
-    // 插入单向好友关系，数据库 trigger 会自动创建反向记录
+    // 插入双向好友关系
     const { error: insertError } = await supabase
       .from('friendships')
-      .insert({
-        user_id: userId,
-        friend_id: target.id,
-        intimacy: 0,
-      })
+      .insert([
+        { user_id: userId, friend_id: target.id, intimacy: 0 },
+        { user_id: target.id, friend_id: userId, intimacy: 0 },
+      ])
 
     if (insertError) {
       console.error('add friend error:', insertError)
