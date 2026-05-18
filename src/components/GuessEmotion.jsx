@@ -50,13 +50,12 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             onClick={onClose}
           />
 
-          {/* 弹窗 — 和 BottleModal 完全一致的居中方式 */}
+          {/* 弹窗 — 使用 calc 精确居中 */}
           <motion.div
-            className="fixed left-0 right-0 z-[70] flex flex-col"
+            className="fixed bottom-0 z-[70] flex flex-col"
             style={{
-              maxWidth: '430px',
-              margin: '0 auto',
-              bottom: 0,
+              left: 'max(0px, calc(50% - 215px))',
+              right: 'max(0px, calc(50% - 215px))',
               maxHeight: '85dvh',
               borderRadius: '28px 28px 0 0',
               background: 'rgba(255, 255, 255, 0.96)',
