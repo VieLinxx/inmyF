@@ -50,25 +50,26 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             onClick={onClose}
           />
 
-          {/* 底部抽屉弹窗 */}
-          <motion.div
-            className="fixed bottom-0 left-0 right-0 z-[70] flex flex-col"
-            style={{
-              margin: '0 auto',
-              maxWidth: '430px',
-              maxHeight: '85dvh',
-              borderRadius: '28px 28px 0 0',
-              background: 'rgba(255, 255, 255, 0.96)',
-              backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-              boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
-            }}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* 弹窗居中容器 */}
+          <div className="fixed inset-0 z-[70] flex items-end justify-center pointer-events-none">
+            <motion.div
+              className="flex flex-col pointer-events-auto"
+              style={{
+                width: '100%',
+                maxWidth: '430px',
+                maxHeight: '85dvh',
+                borderRadius: '28px 28px 0 0',
+                background: 'rgba(255, 255, 255, 0.96)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
+              }}
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* 顶部拖拽条 + 关闭按钮 */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2 relative">
               <div className="w-10 h-1 rounded-full bg-gray-300 absolute left-0 right-0 top-3 mx-auto" />
@@ -194,7 +195,8 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>,
