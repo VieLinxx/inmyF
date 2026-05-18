@@ -3,9 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
 /* ============================================
-   GuessEmotion 猜测情绪弹窗
-   - 选择一个 Emoji 猜测对方的真实情绪
-   - 提交后显示是否正确
+   GuessEmotion 猜测情绪弹窗 — 移动端底部抽屉式
    ============================================ */
 
 const GUESS_EMOJIS = [
@@ -51,44 +49,46 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             onClick={onClose}
           />
 
-          {/* 弹窗 */}
+          {/* 底部抽屉弹窗 */}
           <motion.div
-            className="fixed z-[70] flex flex-col"
+            className="fixed left-0 right-0 z-[70] flex flex-col"
             style={{
-              maxWidth: 360,
-              width: 'calc(100% - 48px)',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              borderRadius: 28,
-              background: 'rgba(255, 255, 255, 0.92)',
+              maxWidth: '430px',
+              margin: '0 auto',
+              bottom: 0,
+              maxHeight: '85dvh',
+              borderRadius: '28px 28px 0 0',
+              background: 'rgba(255, 255, 255, 0.96)',
               backdropFilter: 'blur(24px) saturate(180%)',
               WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+              boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
             }}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 关闭按钮 */}
-            <button
-              className="absolute right-4 top-4 p-1 z-10"
-              style={{ color: '#b0b8c4' }}
-              onClick={onClose}
-            >
-              <X size={20} />
-            </button>
-
-            {/* 内容 */}
-            <div className="p-6">
-              <p
-                className="text-center font-medium mb-1"
-                style={{ fontSize: '18px', color: '#3a4a5a' }}
+            {/* 顶部拖拽条 + 关闭按钮 */}
+            <div className="flex items-center justify-between px-6 pt-4 pb-2 relative">
+              <div className="w-10 h-1 rounded-full bg-gray-300 absolute left-0 right-0 top-3 mx-auto" />
+              <h3
+                className="font-medium w-full text-center"
+                style={{ fontSize: '17px', color: '#3a4a5a' }}
               >
                 猜猜 {moment?.userName} 的真实情绪
-              </p>
+              </h3>
+              <button
+                className="absolute right-4 top-4 p-1"
+                style={{ color: '#b0b8c4' }}
+                onClick={onClose}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* 可滚动内容区 */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
               <p
                 className="text-center text-sm mb-5"
                 style={{ color: '#7a8a9a' }}
@@ -128,7 +128,7 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
               <motion.button
                 className="w-full text-white font-medium"
                 style={{
-                  height: 50,
+                  height: 52,
                   borderRadius: 16,
                   background: selected && !isSubmitting
                     ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
@@ -151,10 +151,10 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             <AnimatePresence>
               {result && (
                 <motion.div
-                  className="absolute inset-0 flex flex-col items-center justify-center z-10"
+                  className="absolute inset-0 flex flex-col items-center justify-center z-20"
                   style={{
-                    borderRadius: 28,
-                    background: 'rgba(255, 255, 255, 0.96)',
+                    borderRadius: '28px 28px 0 0',
+                    background: 'rgba(255, 255, 255, 0.98)',
                     backdropFilter: 'blur(8px)',
                   }}
                   initial={{ opacity: 0 }}
