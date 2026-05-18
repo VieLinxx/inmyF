@@ -50,25 +50,28 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
             onClick={onClose}
           />
 
-          {/* 弹窗 — 使用 calc 精确居中 */}
+          {/* 弹窗 — 外层负责动画，内层负责水平居中 */}
           <motion.div
-            className="fixed bottom-0 z-[70] flex flex-col"
-            style={{
-              left: 'max(0px, calc(50% - 215px))',
-              right: 'max(0px, calc(50% - 215px))',
-              maxHeight: '85dvh',
-              borderRadius: '28px 28px 0 0',
-              background: 'rgba(255, 255, 255, 0.96)',
-              backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-              boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
-            }}
+            className="fixed bottom-0 left-0 right-0 z-[70] flex justify-center"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
+            <div
+              className="flex flex-col w-full"
+              style={{
+                maxWidth: '430px',
+                maxHeight: '85dvh',
+                borderRadius: '28px 28px 0 0',
+                background: 'rgba(255, 255, 255, 0.96)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.15)',
+                margin: '0 12px',
+              }}
+            >
             {/* 顶部拖拽条 + 关闭按钮 */}
             <div className="flex items-center justify-between px-6 pt-4 pb-2 relative">
               <div className="w-10 h-1 rounded-full bg-gray-300 absolute left-0 right-0 top-3 mx-auto" />
@@ -194,6 +197,7 @@ export default function GuessEmotion({ isOpen, onClose, onSubmit, moment }) {
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
           </motion.div>
         </>
       )}
