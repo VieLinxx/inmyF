@@ -10,7 +10,7 @@ import SplashScreen from './components/SplashScreen'
 import { useUserStore } from './store/userStore'
 
 // 构建版本标记，修改此值强制 Vite 重新生成 hash
-console.log('[App] build v20250518-2')
+console.log('[App] build v20250519-1 好友申请机制')
 
 /* ============================================
    路由守卫

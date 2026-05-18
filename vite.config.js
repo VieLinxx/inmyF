@@ -6,7 +6,19 @@ const BUILD_TIME = Date.now()
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // 注入构建时间到 index.html，确保 HTML 内容每次变化，触发 CDN 刷新
+    {
+      name: 'inject-build-time',
+      transformIndexHtml(html) {
+        return html.replace(
+          '</head>',
+          `  <meta name="build-time" content="${BUILD_TIME}">\n  </head>`
+        )
+      },
+    },
+  ],
   base: '/inmyF/',
   build: {
     rollupOptions: {
