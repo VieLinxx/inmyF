@@ -40,7 +40,7 @@ export default function Ocean() {
         .order('created_at', { ascending: false }),
       supabase
         .from('bottle_replies')
-        .select('id, bottle_id, content, created_at')
+        .select('id, bottle_id, user_id, content, created_at')
         .order('created_at', { ascending: true }),
     ])
 

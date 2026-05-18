@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ThumbsUp, ThumbsDown, MessageCircle, X, Send } from 'lucide-react'
@@ -28,10 +28,21 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
   const [localReplies, setLocalReplies] = useState([])
   const [isReplying, setIsReplying] = useState(false)
 
+  // 用 ref 追踪当前瓶子和挂载状态，防止异步操作串瓶
+  const bottleIdRef = useRef(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
   // 当 bottle 变化时同步内部 state，避免上一个瓶子的数据残留
   useEffect(() => {
     if (bottle) {
-      console.log('[BottleModal] bottle changed:', bottle.id, 'replies:', bottle.replies?.length)
+      bottleIdRef.current = bottle.id
       setLiked(bottle.likedByMe || false)
       setLikeCount(bottle.likes || 0)
       setLocalReplies(bottle.replies || [])
@@ -65,6 +76,8 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
 
     try {
       const savedReply = await onReply?.(bottle.id, text)
+      // 只有当组件仍挂载且仍是同一个瓶子时才更新状态，防止串瓶
+      if (!mountedRef.current || bottleIdRef.current !== bottle.id) return
       if (savedReply) {
         // 用服务端返回的正式数据替换临时评论
         setLocalReplies((prev) =>
@@ -72,11 +85,15 @@ export default function BottleModal({ bottle, isOpen, onClose, onLike, onReply }
         )
       }
     } catch (err) {
-      // 回滚：移除临时评论
-      setLocalReplies((prev) => prev.filter((r) => r.id !== tempId))
+      // 回滚：移除临时评论（仅当仍是同一个瓶子时）
+      if (mountedRef.current && bottleIdRef.current === bottle.id) {
+        setLocalReplies((prev) => prev.filter((r) => r.id !== tempId))
+      }
       alert(err.message || '回复失败，请检查网络或重新登录')
     } finally {
-      setIsReplying(false)
+      if (mountedRef.current && bottleIdRef.current === bottle.id) {
+        setIsReplying(false)
+      }
     }
   }
 
